@@ -1,0 +1,9 @@
+{
+  "name": "Instagram Takip Kontrol",
+  "short_name": "Takip Kontrol",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f3f4f7",
+  "theme_color": "#111827",
+  "description": "Instagram takipçi listelerini cihazında karşılaştır."
+}

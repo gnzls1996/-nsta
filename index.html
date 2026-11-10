@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Takip Kontrol">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Takip Kontrol</title>
+<style>
+:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#182230;background:#f3f4f7;font-synthesis:none}
+*{box-sizing:border-box}body{margin:0;padding:env(safe-area-inset-top) 14px env(safe-area-inset-bottom);max-width:760px;margin-inline:auto}
+header{padding:25px 5px 16px}h1{font-size:27px;margin:0 0 5px;letter-spacing:-.6px}.sub{color:#667085;font-size:14px;line-height:1.45;margin:0}
+main{padding-bottom:32px}.panel{background:#fff;border:1px solid #e7e9ee;border-radius:17px;padding:17px;margin:12px 0;box-shadow:0 3px 14px #10182808}
+h2{font-size:17px;margin:0 0 12px}.muted{color:#667085;font-size:13px;line-height:1.45}
+.upload{display:block;border:1.5px dashed #b9c0cc;border-radius:13px;padding:14px;margin:10px 0;background:#fafbfc}
+.upload b{display:block;margin-bottom:4px}.upload input{display:block;width:100%;margin-top:10px;font-size:13px}
+button,.btn{border:0;border-radius:12px;padding:13px 15px;background:#202938;color:white;font-size:14px;font-weight:650;cursor:pointer}
+button.secondary{background:#eef0f4;color:#263244}button:disabled{opacity:.45}
+.primary{width:100%;margin-top:7px;background:#6d42c1}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
+.stat{background:#f4f5f8;border-radius:13px;padding:12px 10px}.stat strong{display:block;font-size:24px}.stat span{font-size:11px;color:#667085}
+.tabs{display:flex;gap:7px;overflow:auto;padding:2px 0 10px}
+.tab{white-space:nowrap;background:#eef0f4;color:#475467;padding:10px 12px;font-size:12px}.tab.active{background:#202938;color:white}
+.search{width:100%;border:1px solid #d0d5dd;border-radius:11px;padding:12px;font-size:15px;margin:5px 0 10px}
+ul{padding:0;margin:0;list-style:none}li{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 2px;border-bottom:1px solid #eef0f3}
+.username{font-weight:600;font-size:14px;overflow-wrap:anywhere}.profile{font-size:12px;color:#6941c6;text-decoration:none;white-space:nowrap}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.row button{flex:1}
+.notice{font-size:12px;line-height:1.5;background:#fff8e7;color:#795600;border-radius:12px;padding:12px}
+.hidden{display:none!important}#error{color:#b42318;font-size:13px;margin-top:8px;white-space:pre-wrap}
+.snapshot{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #eee;font-size:13px}
+small{color:#667085}
+@media(min-width:600px){body{padding-left:22px;padding-right:22px}.panel{padding:20px}}
+</style>
+</head>
+<body>
+<header><h1>Takip Kontrol</h1><p class="sub">Instagram takipçi listelerini güvenli şekilde karşılaştır.</p></header>
+<main>
+<section class="panel">
+<h2>1. Instagram verilerini yükle</h2>
+<p class="muted">Instagram'dan indirdiğin JSON dosyalarını seç. Dosyalar cihazından dışarı gönderilmez.</p>
+<label class="upload"><b>Takipçilerin</b><span class="muted">followers_1.json</span><input id="followers" type="file" accept=".json,application/json"></label>
+<label class="upload"><b>Takip ettiklerin</b><span class="muted">following.json</span><input id="following" type="file" accept=".json,application/json"></label>
+<button id="analyze" class="primary">Listeleri analiz et ve kaydet</button>
+<div id="error"></div>
+<p class="muted">Her yeni dışa aktarımda tekrar yükle. Önceki kayıtlarınla karşılaştırarak değişiklikleri görebilirsin.</p>
+</section>
+<section id="dashboard" class="panel hidden">
+<h2>Özet</h2>
+<div class="stats">
+<div class="stat"><strong id="nFollowing">0</strong><span>Takip ettiklerin</span></div>
+<div class="stat"><strong id="nFollowers">0</strong><span>Takipçilerin</span></div>
+<div class="stat"><strong id="nNoBack">0</strong><span>Geri takip etmeyen</span></div>
+</div>
+<div class="tabs">
+<button class="tab active" data-tab="noBack">Geri takip etmeyen</button>
+<button class="tab" data-tab="mutual">Karşılıklı</button>
+<button class="tab" data-tab="fans">Seni takip edenler</button>
+<button class="tab" data-tab="changes">Yeni değişiklikler</button>
+</div>
+<input id="search" class="search" type="search" placeholder="Kullanıcı adı ara">
+<p id="listInfo" class="muted"></p>
+<ul id="results"></ul><p id="empty" class="muted hidden">Bu listede gösterilecek hesap yok.</p>
+</section>
+<section class="panel">
+<h2>Geçmiş kayıtlar</h2>
+<p class="muted">Yüklediğin listeler bu tarayıcıda saklanır. İki farklı tarihteki kayıtlarla takipçi ve takip değişimlerini görebilirsin.</p>
+<div id="snapshots"><p class="muted">Henüz kayıt yok.</p></div>
+<div class="row" style="margin-top:12px"><button id="exportData" class="secondary">Yedekle</button><button id="clearData" class="secondary">Geçmişi sil</button></div>
+</section>
+<p class="notice"><b>Gizlilik:</b> Uygulama Instagram şifreni istemez. JSON verileri ve geçmiş kayıtları yalnızca bu cihazdaki tarayıcı depolamasında tutulur. Tarayıcı verilerini silersen geçmiş kayıtların da silinebilir.</p>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const KEY='follow-checker-snapshots-v2';
+let current=null, activeTab='noBack';
+const load=()=>{try{return JSON.parse(localStorage.getItem(KEY)||'[]')}catch{return []}};
+const save=a=>localStorage.setItem(KEY,JSON.stringify(a));
+function extract(data,kind){
+ let arr=Array.isArray(data)?data:(kind==='following'?(data.relationships_following||data.following||[]):(data.relationships_followers||data.followers||[]));
+ if(!Array.isArray(arr))throw Error('JSON dosyasının biçimi tanınamadı.');
+ return [...new Set(arr.map(x=>typeof x==='string'?x:(x?.string_list_data?.[0]?.value||x?.title||x?.username||'')).map(x=>String(x).replace(/^@/,'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+}
+async function read(input,kind){if(!input.files[0])throw Error(kind==='following'?'following.json dosyasını seç.':'followers_1.json dosyasını seç.');return extract(JSON.parse(await input.files[0].text()),kind)}
+function setOf(a){return new Set(a.map(x=>x.toLowerCase()))}
+function difference(a,b){const s=setOf(b);return a.filter(x=>!s.has(x.toLowerCase()))}
+$('analyze').onclick=async()=>{
+ $('error').textContent='';
+ try{
+  const [followers,following]=await Promise.all([read($('followers'),'followers'),read($('following'),'following')]);
+  current={date:new Date().toISOString(),followers,following};
+  const history=load(); history.push(current); save(history.slice(-20));
+  showDashboard(); showSnapshots();
+ }catch(e){$('error').textContent=e.message||'Dosyalar okunamadı.'}
+};
+function showDashboard(){
+ $('dashboard').classList.remove('hidden');
+ const f=current.followers, g=current.following;
+ $('nFollowing').textContent=g.length;$('nFollowers').textContent=f.length;$('nNoBack').textContent=difference(g,f).length;
+ renderList();
+}
+function getItems(){
+ const f=current.followers,g=current.following;
+ if(activeTab==='noBack')return difference(g,f);
+ if(activeTab==='mutual')return g.filter(x=>setOf(f).has(x.toLowerCase()));
+ if(activeTab==='fans')return difference(f,g);
+ const h=load(); if(h.length<2)return [];
+ const prev=h[h.length-2];
+ const lostFollowers=difference(prev.followers,f);
+ const gainedFollowers=difference(f,prev.followers);
+ const stoppedFollowing=difference(prev.following,g);
+ const startedFollowing=difference(g,prev.following);
+ return [
+  ...lostFollowers.map(x=>'Takipten çıktı: @'+x),
+  ...gainedFollowers.map(x=>'Yeni takipçi: @'+x),
+  ...stoppedFollowing.map(x=>'Takibi bıraktığın: @'+x),
+  ...startedFollowing.map(x=>'Yeni takip ettiğin: @'+x)
+ ];
+}
+function renderList(){
+ const items=getItems(),q=$('search').value.trim().toLowerCase();
+ const shown=items.filter(x=>x.toLowerCase().includes(q));
+ $('results').innerHTML='';
+ shown.forEach(item=>{
+  const li=document.createElement('li');
+  if(activeTab==='changes'){const s=document.createElement('span');s.className='username';s.textContent=item;li.append(s)}
+  else{const s=document.createElement('span');s.className='username';s.textContent='@'+item;const a=document.createElement('a');a.className='profile';a.target='_blank';a.rel='noopener';a.href='https://www.instagram.com/'+encodeURIComponent(item)+'/';a.textContent='Profili aç ↗';li.append(s,a)}
+  $('results').append(li);
+ });
+ const labels={noBack:'Senin takip ettiğin ama seni takip etmeyen hesaplar',mutual:'Karşılıklı takip ettiğin hesaplar',fans:'Seni takip eden ama senin takip etmediğin hesaplar',changes:'Son iki kayıt arasındaki değişiklikler'};
+ $('listInfo').textContent=labels[activeTab]+' · '+items.length+' hesap';
+ $('empty').classList.toggle('hidden',shown.length!==0);
+}
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{activeTab=b.dataset.tab;document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===b));renderList()});
+$('search').oninput=renderList;
+function showSnapshots(){
+ const h=load();$('snapshots').innerHTML='';
+ if(!h.length){$('snapshots').innerHTML='<p class="muted">Henüz kayıt yok.</p>';return}
+ h.slice().reverse().forEach((s,i)=>{
+  const d=document.createElement('div');d.className='snapshot';
+  const left=document.createElement('span');left.textContent=new Date(s.date).toLocaleString('tr-TR')+' · '+s.followers.length+' takipçi / '+s.following.length+' takip';
+  const right=document.createElement('button');right.className='secondary';right.textContent='Aç';right.onclick=()=>{current=s;showDashboard();window.scrollTo({top:0,behavior:'smooth'})};
+  d.append(left,right);$('snapshots').append(d);
+ });
+}
+$('exportData').onclick=()=>{
+ const blob=new Blob([JSON.stringify(load(),null,2)],{type:'application/json'});
+ const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='takip-kontrol-yedek.json';a.click();URL.revokeObjectURL(a.href);
+};
+$('clearData').onclick=()=>{if(confirm('Bu cihazdaki tüm geçmiş kayıtları silinsin mi?')){localStorage.removeItem(KEY);current=null;$('dashboard').classList.add('hidden');showSnapshots()}};
+if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+showSnapshots();
+</script>
+</body></html>
